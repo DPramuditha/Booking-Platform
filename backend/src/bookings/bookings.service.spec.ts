@@ -58,6 +58,10 @@ describe('BookingsService', () => {
     servicesService = module.get<ServicesService>(ServicesService);
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
@@ -100,6 +104,19 @@ describe('BookingsService', () => {
       await expect(
         service.updateStatus('booking-uuid', BookingStatus.COMPLETED)
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reject status update if active duplicate booking exists', async () => {
+      const existingBooking = { ...mockBooking, status: BookingStatus.PENDING };
+      const anotherActiveBooking = { ...mockBooking, id: 'another-booking-uuid', status: BookingStatus.CONFIRMED };
+      
+      jest.spyOn(bookingsRepo, 'findOne')
+        .mockResolvedValueOnce(existingBooking as any)
+        .mockResolvedValueOnce(anotherActiveBooking as any);
+
+      await expect(
+        service.updateStatus('booking-uuid', BookingStatus.CONFIRMED)
+      ).rejects.toThrow(ConflictException);
     });
   });
 });

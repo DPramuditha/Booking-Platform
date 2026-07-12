@@ -2,12 +2,12 @@ import { IsEmail, IsNotEmpty, IsString, MinLength, IsOptional, IsIn } from 'clas
 import { ApiProperty } from '@nestjs/swagger';
 
 export class RegisterDto {
-  @ApiProperty({ example: 'John Doe', description: 'Full name of the user' })
+  @ApiProperty({ example: 'Dimuthu Pramuditha', description: 'Full name of the user' })
   @IsNotEmpty({ message: 'Name is required' })
   @IsString()
   name!: string;
 
-  @ApiProperty({ example: 'john@example.com', description: 'Valid email address' })
+  @ApiProperty({ example: 'dimuthu@example.com', description: 'Valid email address' })
   @IsEmail({}, { message: 'Must be a valid email address' })
   @IsNotEmpty({ message: 'Email is required' })
   email!: string;

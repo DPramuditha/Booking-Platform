@@ -113,6 +113,23 @@ export class BookingsService {
       throw new BadRequestException('Cancelled bookings cannot be marked as completed');
     }
 
+    // Business Rule: Prevent duplicate bookings for the same service, date, and time when activating a booking
+    if (status !== BookingStatus.CANCELLED) {
+      const duplicate = await this.bookingsRepository.findOne({
+        where: {
+          id: Not(id),
+          serviceId: booking.serviceId,
+          bookingDate: booking.bookingDate,
+          bookingTime: booking.bookingTime,
+          status: Not(BookingStatus.CANCELLED),
+        },
+      });
+
+      if (duplicate) {
+        throw new ConflictException('This time slot is already booked by another active booking');
+      }
+    }
+
     booking.status = status;
     return this.bookingsRepository.save(booking);
   }
