@@ -94,6 +94,7 @@ function App() {
   const [serviceModalMode, setServiceModalMode] = useState<'create' | 'edit' | null>(null);
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
   const [deletingService, setDeletingService] = useState<Service | null>(null);
+  const [cancellingBooking, setCancellingBooking] = useState<Booking | null>(null);
   const [serviceTitle, setServiceTitle] = useState('');
   const [serviceDescription, setServiceDescription] = useState('');
   const [serviceDuration, setServiceDuration] = useState(30);
@@ -130,7 +131,8 @@ function App() {
       showLogoutConfirmModal ||
       serviceModalMode !== null ||
       selectedService !== null ||
-      deletingService !== null;
+      deletingService !== null ||
+      cancellingBooking !== null;
 
     if (isModalOpen) {
       document.body.style.overflow = 'hidden';
@@ -144,7 +146,7 @@ function App() {
       document.body.style.overflow = '';
       document.body.style.paddingRight = '';
     };
-  }, [showLoginModal, showRegisterModal, showLogoutConfirmModal, serviceModalMode, selectedService, deletingService]);
+  }, [showLoginModal, showRegisterModal, showLogoutConfirmModal, serviceModalMode, selectedService, deletingService, cancellingBooking]);
 
   // Watch authentication state changes
   useEffect(() => {
@@ -404,7 +406,6 @@ function App() {
   };
 
   const handleCancelBooking = async (id: string) => {
-    if (!window.confirm('Are you sure you want to cancel this booking?')) return;
     try {
       setActionLoading(`cancel-${id}`);
       await api.bookings.cancel(id);
@@ -416,6 +417,7 @@ function App() {
       showError(err.message || 'Failed to cancel booking');
     } finally {
       setActionLoading(null);
+      setCancellingBooking(null);
     }
   };
 
@@ -906,12 +908,10 @@ function App() {
                           className={`badge ${service.isActive ? 'badge-completed' : 'badge-cancelled'}`}
                           style={{ marginBottom: '10px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                         >
-                          {service.isActive && (
-                            <span className="status-dot-wrapper" style={{ width: '8px', height: '8px' }}>
-                              <span className="status-dot-ping animate-ping" style={{ width: '8px', height: '8px' }}></span>
-                              <span className="status-dot-core" style={{ width: '8px', height: '8px' }}></span>
-                            </span>
-                          )}
+                          <span className={`status-dot-wrapper ${!service.isActive ? 'status-dot-error' : ''}`} style={{ width: '8px', height: '8px' }}>
+                            <span className="status-dot-ping animate-ping" style={{ width: '8px', height: '8px' }}></span>
+                            <span className="status-dot-core" style={{ width: '8px', height: '8px' }}></span>
+                          </span>
                           {service.isActive ? 'Active' : 'Inactive'}
                         </span>
 
@@ -1003,7 +1003,15 @@ function App() {
                                   <div style={{ fontSize: '13px', color: 'var(--primary)', fontWeight: 500, marginTop: '2px' }}>{booking.bookingTime}</div>
                                 </td>
                                 <td>
-                                  <span className={`badge badge-${booking.status.toLowerCase()}`}>
+                                  <span className={`badge badge-${booking.status.toLowerCase()}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                    <span className={`status-dot-wrapper ${
+                                      booking.status === 'PENDING' ? 'status-dot-warning' :
+                                      booking.status === 'CONFIRMED' ? 'status-dot-info' :
+                                      booking.status === 'CANCELLED' ? 'status-dot-error' : ''
+                                    }`} style={{ width: '8px', height: '8px' }}>
+                                      <span className="status-dot-ping animate-ping" style={{ width: '8px', height: '8px' }}></span>
+                                      <span className="status-dot-core" style={{ width: '8px', height: '8px' }}></span>
+                                    </span>
                                     {booking.status}
                                   </span>
                                 </td>
@@ -1034,7 +1042,7 @@ function App() {
                                       <button
                                         className="btn btn-danger"
                                         style={{ padding: '6px 12px', fontSize: '12px' }}
-                                        onClick={() => handleCancelBooking(booking.id)}
+                                        onClick={() => setCancellingBooking(booking)}
                                       >
                                         Cancel
                                       </button>
@@ -1568,12 +1576,46 @@ function App() {
                 onClick={() => handleDeleteService(deletingService.id)}
                 style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
               >
-                {/* <Trash size={16} />  */}
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style={{ width: '16px', height: '16px', color: 'var(--error)' }}>
                   <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
                 </svg>
 
                 Delete Service
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Booking Cancel Confirmation Modal */}
+      {cancellingBooking && (
+        <div className="modal-overlay" onClick={() => setCancellingBooking(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '450px', textAlign: 'center' }}>
+            <h3 style={{ fontSize: '20px', marginBottom: '12px', color: 'var(--error)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <AlertCircle size={24} style={{ color: 'var(--error)' }} />
+              Confirm Cancellation
+            </h3>
+            <p style={{ color: 'var(--text-title)', fontWeight: 600, marginBottom: '8px', fontSize: '15px' }}>
+              Are you sure you want to cancel this booking?
+            </p>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '13px', lineHeight: '1.5' }}>
+              This will cancel the booking for <strong>{cancellingBooking.customerName}</strong> on <strong>{cancellingBooking.bookingDate}</strong> at <strong>{cancellingBooking.bookingTime}</strong>. This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setCancellingBooking(null)}
+                style={{ flex: 1 }}
+              >
+                No, Keep Booking
+              </button>
+              <button
+                className="btn btn-danger"
+                disabled={actionLoading === `cancel-${cancellingBooking.id}`}
+                onClick={() => handleCancelBooking(cancellingBooking.id)}
+                style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              >
+                {actionLoading === `cancel-${cancellingBooking.id}` ? 'Cancelling...' : 'Yes, Cancel Booking'}
               </button>
             </div>
           </div>

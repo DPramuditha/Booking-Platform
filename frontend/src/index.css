@@ -459,6 +459,16 @@ h6 {
   background-color: var(--error);
 }
 
+.status-dot-warning .status-dot-ping,
+.status-dot-warning .status-dot-core {
+  background-color: var(--warning);
+}
+
+.status-dot-info .status-dot-ping,
+.status-dot-info .status-dot-core {
+  background-color: var(--info);
+}
+
 /* Toast Notifications */
 .toast-notification {
   position: fixed;
