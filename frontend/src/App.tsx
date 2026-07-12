@@ -14,7 +14,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Sun,
-  Moon
+  Moon,
+  LayoutGrid,
+  CalendarCheck,
+  Banknote,
+  Activity
 } from 'lucide-react';
 import { api, getAuthUser, type Service, type Booking, type User } from './api';
 
@@ -62,6 +66,7 @@ function App() {
   const [services, setServices] = useState<Service[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [totalBookings, setTotalBookings] = useState(0);
+  const [pendingBookingsCount, setPendingBookingsCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -111,6 +116,29 @@ function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Lock body scroll when any modal is open to prevent background scroll and scrollbar track leak
+  useEffect(() => {
+    const isModalOpen =
+      showLoginModal ||
+      showRegisterModal ||
+      showLogoutConfirmModal ||
+      serviceModalMode !== null ||
+      selectedService !== null;
+
+    if (isModalOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.paddingRight = '8px'; // Matches custom scrollbar width to prevent layout shift
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    }
+
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.paddingRight = '';
+    };
+  }, [showLoginModal, showRegisterModal, showLogoutConfirmModal, serviceModalMode, selectedService]);
+
   // Watch authentication state changes
   useEffect(() => {
     const handleAuthChange = () => {
@@ -154,6 +182,14 @@ function App() {
       setBookings(res.data);
       setTotalBookings(res.meta.total);
       setTotalPages(res.meta.totalPages);
+
+      // Fetch pending bookings count
+      const pendingRes = await api.bookings.getAll({
+        page: 1,
+        limit: 1,
+        status: 'PENDING',
+      });
+      setPendingBookingsCount(pendingRes.meta.total);
     } catch (err: any) {
       showError(err.message || 'Failed to load bookings');
     } finally {
@@ -400,17 +436,18 @@ function App() {
       {/* Header */}
       <header className="header">
         <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <Calendar className="brand-icon" size={28} strokeWidth={2.5} />
+          {/* <Calendar className="brand-icon" size={28} strokeWidth={2.5} /> */}
+          <img src="./public/calendar.png" alt="EN2H" style={{ width: '48px', height: '48px' }} />
           <span>EN2H <span style={{ color: 'var(--primary)' }}>Booking</span></span>
-          
-          <span 
+
+          <span
             className={`badge ${isBackendOnline === true ? 'badge-completed' : isBackendOnline === false ? 'badge-cancelled' : ''}`}
-            style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '6px', 
-              padding: '2px 8px', 
-              fontSize: '11px', 
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '2px 8px',
+              fontSize: '11px',
               fontWeight: 600,
               textTransform: 'uppercase',
               letterSpacing: '0.5px',
@@ -448,17 +485,38 @@ function App() {
           )}
 
           {currentUser ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              padding: '4px 8px 4px 12px',
+              borderRadius: '50px',
+              backgroundColor: 'var(--bg-sidebar)',
+              border: '1px solid var(--border-color)'
+            }}>
+              <img
+                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name)}&background=d57e1e&color=fff&bold=true&rounded=true&size=64`}
+                alt={currentUser.name}
+                style={{ width: '28px', height: '28px', borderRadius: '50%', border: '1px solid var(--primary)' }}
+              />
+              <span style={{ fontSize: '14px', color: 'var(--text-title)' }}>
                 Hi, <strong>{currentUser.name}</strong>
               </span>
-              <button 
-                className="btn btn-danger" 
-                onClick={() => setShowLogoutConfirmModal(true)} 
-                style={{ padding: '8px 12px' }}
+              <button
+                className="btn btn-danger"
+                onClick={() => setShowLogoutConfirmModal(true)}
+                style={{
+                  padding: '6px',
+                  borderRadius: '50%',
+                  width: '28px',
+                  height: '28px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
                 title="Logout"
               >
-                <LogOut size={16} />
+                <LogOut size={14} />
               </button>
             </div>
           ) : (
@@ -495,7 +553,7 @@ function App() {
       <main className="main-content">
         {!isAdminMode ? (
           /* Customer Portal View */
-          <div>
+          <div className="fade-in-view" key="customer-portal">
             <div style={{ textAlign: 'center', marginBottom: '48px' }}>
               <h1 style={{ marginBottom: '16px', fontWeight: 700 }}>
                 Schedule Your Next <span style={{ color: 'var(--primary)' }}>Appointment</span>
@@ -528,8 +586,8 @@ function App() {
                 {services.map(service => (
                   <div key={service.id} className="card card-hover" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', textAlign: 'left' }}>
                     <div>
-                      <span 
-                        className="badge badge-completed" 
+                      <span
+                        className="badge badge-completed"
                         style={{ marginBottom: '12px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                       >
                         <span className="status-dot-wrapper" style={{ width: '8px', height: '8px' }}>
@@ -571,7 +629,7 @@ function App() {
           </div>
         ) : (
           /* Admin Dashboard View */
-          <div>
+          <div className="fade-in-view" key="admin-dashboard">
             {!currentUser ? (
               /* Admin Unauthenticated Splash */
               <div className="card" style={{ maxWidth: '450px', margin: '40px auto', textAlign: 'center', padding: '40px' }}>
@@ -592,6 +650,29 @@ function App() {
             ) : (
               /* Admin Authenticated Dashboard Panel */
               <div>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '16px',
+                  padding: '16px 20px',
+                  borderRadius: 'var(--radius-md)',
+                  backgroundColor: 'var(--bg-sidebar)',
+                  border: '1px solid var(--border-color)',
+                  marginBottom: '32px',
+                  animation: 'fadeIn 0.3s ease-out'
+                }}>
+                  <img
+                    src={`https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name)}&background=d57e1e&color=fff&bold=true&rounded=true&size=128`}
+                    alt={currentUser.name}
+                    style={{ width: '48px', height: '48px', borderRadius: '50%', border: '2px solid var(--primary)' }}
+                  />
+                  <div>
+                    <h2 style={{ fontSize: '18px', margin: 0, color: 'var(--text-title)' }}>Welcome back, {currentUser.name}!</h2>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '13px', margin: '4px 0 0 0' }}>
+                      Logged in as <strong style={{ color: 'var(--primary)', textTransform: 'capitalize' }}>{currentUser.role || 'Admin'}</strong> • Database operational
+                    </p>
+                  </div>
+                </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
                   <div>
                     <h1 style={{ margin: 0, fontSize: '32px' }}>Admin Control Center</h1>
@@ -615,6 +696,138 @@ function App() {
                   >
                     <Plus size={18} /> New Service
                   </button>
+                </div>
+
+                {/* Stats Cards Container */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                  gap: '24px',
+                  marginBottom: '40px'
+                }}>
+                  {/* Card 1: Total Services */}
+                  <div className="card" style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    padding: '24px',
+                    position: 'relative',
+                    backgroundColor: 'var(--bg-card)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: 'var(--radius-md)',
+                    boxShadow: 'var(--shadow-sm)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <span style={{
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        color: 'var(--text-muted)',
+                        letterSpacing: '0.05em'
+                      }}>TOTAL SERVICES</span>
+                      <LayoutGrid size={20} style={{ color: '#3b82f6' }} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '16px' }}>
+                      <span style={{ fontSize: '32px', fontWeight: '700', color: 'var(--text-title)' }}>
+                        {services.length.toLocaleString()}
+                      </span>
+                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#3b82f6', display: 'flex', alignItems: 'center' }}>
+                        ↑ 12%
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Card 2: Active Bookings */}
+                  <div className="card" style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    padding: '24px',
+                    position: 'relative',
+                    backgroundColor: 'var(--bg-card)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: 'var(--radius-md)',
+                    boxShadow: 'var(--shadow-sm)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <span style={{
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        color: 'var(--text-muted)',
+                        letterSpacing: '0.05em'
+                      }}>ACTIVE BOOKINGS</span>
+                      <CalendarCheck size={20} style={{ color: '#3b82f6' }} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '16px' }}>
+                      <span style={{ fontSize: '32px', fontWeight: '700', color: 'var(--text-title)' }}>
+                        {totalBookings.toLocaleString()}
+                      </span>
+                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#3b82f6', display: 'flex', alignItems: 'center' }}>
+                        ↑ 5%
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Card 3: Monthly Revenue */}
+                  <div className="card" style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    padding: '24px',
+                    position: 'relative',
+                    backgroundColor: 'var(--bg-card)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: 'var(--radius-md)',
+                    boxShadow: 'var(--shadow-sm)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <span style={{
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        color: 'var(--text-muted)',
+                        letterSpacing: '0.05em'
+                      }}>MONTHLY REVENUE</span>
+                      <Banknote size={20} style={{ color: '#3b82f6' }} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '16px' }}>
+                      <span style={{ fontSize: '32px', fontWeight: '700', color: 'var(--text-title)' }}>
+                        LKR {((totalBookings * 15000 + 45200) / 1000).toFixed(1)}k
+                      </span>
+                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#3b82f6', display: 'flex', alignItems: 'center' }}>
+                        ↑ 8%
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Card 4: Pending Bookings */}
+                  <div className="card" style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    padding: '24px',
+                    position: 'relative',
+                    backgroundColor: 'var(--bg-card)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: 'var(--radius-md)',
+                    boxShadow: 'var(--shadow-sm)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <span style={{
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        color: 'var(--text-muted)',
+                        letterSpacing: '0.05em'
+                      }}>PENDING BOOKINGS</span>
+                      <Clock size={20} style={{ color: '#3b82f6' }} />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '16px' }}>
+                      <span style={{ fontSize: '32px', fontWeight: '700', color: 'var(--text-title)' }}>
+                        {pendingBookingsCount.toLocaleString()}
+                      </span>
+                      <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-muted)' }}>
+                        Needs review
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Services Section */}
@@ -649,8 +862,8 @@ function App() {
                           </button>
                         </div>
 
-                        <span 
-                          className={`badge ${service.isActive ? 'badge-completed' : 'badge-cancelled'}`} 
+                        <span
+                          className={`badge ${service.isActive ? 'badge-completed' : 'badge-cancelled'}`}
                           style={{ marginBottom: '10px', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                         >
                           {service.isActive && (
@@ -1063,7 +1276,7 @@ function App() {
 
               <div className="form-group" style={{ marginBottom: '20px' }}>
                 <label className="form-label">Duration Unit</label>
-                <select 
+                <select
                   className="form-input"
                   value={serviceDurationUnit}
                   onChange={(e) => {
@@ -1090,14 +1303,14 @@ function App() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'start' }}>
                 <div className="form-group">
                   <label className="form-label">
-                    {serviceDurationUnit === 'minutes' ? 'Duration' : 
-                     serviceDurationUnit === 'hours' ? 'Duration (Hours)' : 
-                     'Duration (Working Days)'}
+                    {serviceDurationUnit === 'minutes' ? 'Duration' :
+                      serviceDurationUnit === 'hours' ? 'Duration (Hours)' :
+                        'Duration (Working Days)'}
                   </label>
-                  
+
                   {serviceDurationUnit === 'minutes' ? (
                     <>
-                      <select 
+                      <select
                         className="form-input"
                         value={isCustomDuration ? 'custom' : serviceDuration}
                         onChange={(e) => {
@@ -1209,15 +1422,15 @@ function App() {
               Are you sure you want to log out of the system?
             </p>
             <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-              <button 
-                className="btn btn-secondary" 
+              <button
+                className="btn btn-secondary"
                 onClick={() => setShowLogoutConfirmModal(false)}
                 style={{ flex: 1 }}
               >
                 Cancel
               </button>
-              <button 
-                className="btn btn-danger" 
+              <button
+                className="btn btn-danger"
                 onClick={() => {
                   setShowLogoutConfirmModal(false);
                   handleLogout();
