@@ -45,10 +45,11 @@ function App() {
   }, [theme]);
 
   // Navigation & Auth States
-  const [isAdminMode, setIsAdminMode] = useState(false);
+  const [isAdminMode, setIsAdminMode] = useState(() => getAuthUser() !== null);
   const [currentUser, setCurrentUser] = useState<User | null>(getAuthUser());
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [showLogoutConfirmModal, setShowLogoutConfirmModal] = useState(false);
 
   // Auth Forms
   const [loginEmail, setLoginEmail] = useState('');
@@ -64,6 +65,7 @@ function App() {
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [isBackendOnline, setIsBackendOnline] = useState<boolean | null>(null);
 
   // Notification States
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -94,6 +96,21 @@ function App() {
   const [statusFilter, setStatusFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
+  const checkBackendStatus = async () => {
+    try {
+      await api.services.getAll();
+      setIsBackendOnline(true);
+    } catch (err) {
+      setIsBackendOnline(false);
+    }
+  };
+
+  useEffect(() => {
+    checkBackendStatus();
+    const interval = setInterval(checkBackendStatus, 8000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Watch authentication state changes
   useEffect(() => {
     const handleAuthChange = () => {
@@ -101,6 +118,8 @@ function App() {
       setCurrentUser(u);
       if (!u) {
         setIsAdminMode(false);
+      } else {
+        setIsAdminMode(true);
       }
     };
     window.addEventListener('auth-change', handleAuthChange);
@@ -185,7 +204,7 @@ function App() {
     e.preventDefault();
     try {
       setActionLoading('register');
-      await api.auth.register({ name: registerName, email: registerEmail, password: registerPassword });
+      await api.auth.register({ name: registerName, email: registerEmail, password: registerPassword, role: 'admin' });
       setRegisterName('');
       setRegisterEmail('');
       setRegisterPassword('');
@@ -202,9 +221,14 @@ function App() {
   const handleLogout = async () => {
     try {
       await api.auth.logout();
-      showSuccess('Logged out successfully');
     } catch (err: any) {
-      showError('Logout failed');
+      // Force local logout if server call fails (e.g. backend is offline)
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('authUser');
+      window.dispatchEvent(new Event('auth-change'));
+    } finally {
+      showSuccess('Successfully logged out');
     }
   };
 
@@ -351,6 +375,28 @@ function App() {
 
   return (
     <div className="app-container">
+      {isBackendOnline === false && (
+        <div style={{
+          backgroundColor: 'rgba(239, 68, 68, 0.12)',
+          color: 'var(--error)',
+          padding: '12px 24px',
+          textAlign: 'center',
+          fontSize: '14px',
+          fontWeight: 600,
+          borderBottom: '1px solid rgba(239, 68, 68, 0.2)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          animation: 'fadeIn 0.3s ease-out',
+          zIndex: 1001,
+          position: 'relative'
+        }}>
+          <AlertCircle size={16} />
+          <span>Connection Error: Failed to fetch database or backend API. Please ensure your local database is running and NestJS is started on port 3000.</span>
+        </div>
+      )}
+
       {/* Header */}
       <header className="header">
         <div className="brand" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -358,7 +404,7 @@ function App() {
           <span>EN2H <span style={{ color: 'var(--primary)' }}>Booking</span></span>
           
           <span 
-            className="badge badge-completed" 
+            className={`badge ${isBackendOnline === true ? 'badge-completed' : isBackendOnline === false ? 'badge-cancelled' : ''}`}
             style={{ 
               display: 'flex', 
               alignItems: 'center', 
@@ -367,14 +413,18 @@ function App() {
               fontSize: '11px', 
               fontWeight: 600,
               textTransform: 'uppercase',
-              letterSpacing: '0.5px'
+              letterSpacing: '0.5px',
+              backgroundColor: isBackendOnline === null ? 'var(--border-color)' : undefined,
+              color: isBackendOnline === null ? 'var(--text-muted)' : undefined,
             }}
           >
-            <span className="status-dot-wrapper" style={{ width: '8px', height: '8px' }}>
-              <span className="status-dot-ping animate-ping" style={{ width: '8px', height: '8px' }}></span>
-              <span className="status-dot-core" style={{ width: '8px', height: '8px' }}></span>
+            <span className={`status-dot-wrapper ${isBackendOnline === false ? 'status-dot-error' : ''}`} style={{ width: '8px', height: '8px' }}>
+              {isBackendOnline !== null && (
+                <span className="status-dot-ping animate-ping" style={{ width: '8px', height: '8px', backgroundColor: isBackendOnline === null ? 'var(--text-muted)' : undefined }}></span>
+              )}
+              <span className="status-dot-core" style={{ width: '8px', height: '8px', backgroundColor: isBackendOnline === null ? 'var(--text-muted)' : undefined }}></span>
             </span>
-            Live
+            {isBackendOnline === true ? 'Live' : isBackendOnline === false ? 'Offline' : 'Connecting...'}
           </span>
         </div>
 
@@ -388,19 +438,26 @@ function App() {
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
 
-          <button
-            className="btn btn-secondary"
-            onClick={() => setIsAdminMode(!isAdminMode)}
-          >
-            {isAdminMode ? 'Customer Portal' : 'Admin Panel'}
-          </button>
+          {!currentUser && (
+            <button
+              className="btn btn-secondary"
+              onClick={() => setIsAdminMode(!isAdminMode)}
+            >
+              {isAdminMode ? 'Customer Portal' : 'Admin Panel'}
+            </button>
+          )}
 
           {currentUser ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{ fontSize: '14px', color: 'var(--text-muted)' }}>
                 Hi, <strong>{currentUser.name}</strong>
               </span>
-              <button className="btn btn-danger" onClick={handleLogout} style={{ padding: '8px 12px' }}>
+              <button 
+                className="btn btn-danger" 
+                onClick={() => setShowLogoutConfirmModal(true)} 
+                style={{ padding: '8px 12px' }}
+                title="Logout"
+              >
                 <LogOut size={16} />
               </button>
             </div>
@@ -1141,6 +1198,35 @@ function App() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {showLogoutConfirmModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '400px', textAlign: 'center' }}>
+            <h3 style={{ fontSize: '20px', marginBottom: '12px' }}>Confirm Logout</h3>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '15px' }}>
+              Are you sure you want to log out of the system?
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setShowLogoutConfirmModal(false)}
+                style={{ flex: 1 }}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn btn-danger" 
+                onClick={() => {
+                  setShowLogoutConfirmModal(false);
+                  handleLogout();
+                }}
+                style={{ flex: 1 }}
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       )}
