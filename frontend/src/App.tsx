@@ -21,6 +21,7 @@ import {
   Activity
 } from 'lucide-react';
 import { api, getAuthUser, type Service, type Booking, type User } from './api';
+import FlickerSpinner from './FlickerSpinner';
 
 const formatServiceDuration = (duration: number, unit?: string) => {
   const u = unit || 'minutes';
@@ -71,6 +72,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [isBackendOnline, setIsBackendOnline] = useState<boolean | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   // Notification States
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -165,6 +167,7 @@ function App() {
       showError(err.message || 'Failed to load services');
     } finally {
       setLoading(false);
+      setIsInitializing(false);
     }
   };
 
@@ -256,6 +259,7 @@ function App() {
 
   const handleLogout = async () => {
     try {
+      setActionLoading('logout');
       await api.auth.logout();
     } catch (err: any) {
       // Force local logout if server call fails (e.g. backend is offline)
@@ -264,6 +268,7 @@ function App() {
       localStorage.removeItem('authUser');
       window.dispatchEvent(new Event('auth-change'));
     } finally {
+      setActionLoading(null);
       showSuccess('Successfully logged out');
     }
   };
@@ -408,6 +413,25 @@ function App() {
       setActionLoading(null);
     }
   };
+
+  if (isInitializing) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        width: '100vw',
+        backgroundColor: 'var(--bg-main)',
+        color: 'var(--text-title)',
+        gap: '24px'
+      }}>
+        <FlickerSpinner size={48} />
+        <h2 style={{ fontSize: '18px', fontWeight: 500, color: 'var(--text-muted)' }}>Loading Platform...</h2>
+      </div>
+    );
+  }
 
   return (
     <div className="app-container">
@@ -570,7 +594,7 @@ function App() {
 
             {loading ? (
               <div className="spinner-container">
-                <div className="spinner"></div>
+                <FlickerSpinner size={32} />
               </div>
             ) : services.length === 0 ? (
               <div className="card" style={{ padding: '40px', textAlign: 'center' }}>
@@ -632,19 +656,24 @@ function App() {
           <div className="fade-in-view" key="admin-dashboard">
             {!currentUser ? (
               /* Admin Unauthenticated Splash */
-              <div className="card" style={{ maxWidth: '450px', margin: '40px auto', textAlign: 'center', padding: '40px' }}>
-                <Shield size={48} style={{ color: 'var(--primary)', marginBottom: '16px' }} />
-                <h2 style={{ marginBottom: '12px' }}>Admin Dashboard</h2>
-                <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '15px' }}>
-                  Please login or create an account to manage services and review bookings.
-                </p>
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-                  <button className="btn btn-primary" onClick={() => setShowLoginModal(true)}>
-                    Sign In
-                  </button>
-                  <button className="btn btn-secondary" onClick={() => setShowRegisterModal(true)}>
-                    Register
-                  </button>
+              <div className="card split-card">
+                <div className="split-card-image" />
+                <div className="split-card-content">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style={{ width: '48px', height: '48px', color: 'var(--primary)', marginBottom: '16px' }}>
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
+                  </svg>
+                  <h2 style={{ marginBottom: '12px' }}>Admin Dashboard</h2>
+                  <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '15px', lineHeight: '1.6' }}>
+                    Please login or create an account to manage services and review bookings.
+                  </p>
+                  <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', width: '100%' }}>
+                    <button className="btn btn-primary" onClick={() => setShowLoginModal(true)} style={{ flex: 1, maxWidth: '150px' }}>
+                      Sign In
+                    </button>
+                    <button className="btn btn-secondary" onClick={() => setShowRegisterModal(true)} style={{ flex: 1, maxWidth: '150px' }}>
+                      Register
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
@@ -925,7 +954,7 @@ function App() {
 
                   {loading ? (
                     <div className="spinner-container">
-                      <div className="spinner"></div>
+                      <FlickerSpinner size={32} />
                     </div>
                   ) : bookings.length === 0 ? (
                     <div className="card" style={{ padding: '40px', textAlign: 'center' }}>
@@ -1139,45 +1168,48 @@ function App() {
       {/* Admin Login Modal */}
       {showLoginModal && (
         <div className="modal-overlay" onClick={() => setShowLoginModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
-            <h2 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '20px' }}>
-              Admin Login
-            </h2>
+          <div className="modal-content split-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="split-modal-image" />
+            <div className="split-modal-form">
+              <h2 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '20px' }}>
+                Admin Login
+              </h2>
 
-            <form onSubmit={handleLogin}>
-              <div className="form-group">
-                <label className="form-label">Email Address</label>
-                <input
-                  type="email"
-                  required
-                  className="form-input"
-                  placeholder="admin@entwoh.com"
-                  value={loginEmail}
-                  onChange={(e) => setLoginEmail(e.target.value)}
-                />
-              </div>
+              <form onSubmit={handleLogin}>
+                <div className="form-group">
+                  <label className="form-label">Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    className="form-input"
+                    placeholder="admin@entwoh.com"
+                    value={loginEmail}
+                    onChange={(e) => setLoginEmail(e.target.value)}
+                  />
+                </div>
 
-              <div className="form-group">
-                <label className="form-label">Password</label>
-                <input
-                  type="password"
-                  required
-                  className="form-input"
-                  placeholder="••••••••"
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                />
-              </div>
+                <div className="form-group">
+                  <label className="form-label">Password</label>
+                  <input
+                    type="password"
+                    required
+                    className="form-input"
+                    placeholder="••••••••"
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                  />
+                </div>
 
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowLoginModal(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary" disabled={actionLoading === 'login'}>
-                  {actionLoading === 'login' ? 'Signing In...' : 'Log In'}
-                </button>
-              </div>
-            </form>
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowLoginModal(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary" disabled={actionLoading === 'login'}>
+                    {actionLoading === 'login' ? 'Signing In...' : 'Log In'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
@@ -1185,57 +1217,60 @@ function App() {
       {/* Admin Register Modal */}
       {showRegisterModal && (
         <div className="modal-overlay" onClick={() => setShowRegisterModal(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
-            <h2 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '20px' }}>
-              Create Admin Account
-            </h2>
+          <div className="modal-content split-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="split-modal-image" />
+            <div className="split-modal-form">
+              <h2 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '20px' }}>
+                Create Admin Account
+              </h2>
 
-            <form onSubmit={handleRegister}>
-              <div className="form-group">
-                <label className="form-label">Full Name</label>
-                <input
-                  type="text"
-                  required
-                  className="form-input"
-                  placeholder="Admin User"
-                  value={registerName}
-                  onChange={(e) => setRegisterName(e.target.value)}
-                />
-              </div>
+              <form onSubmit={handleRegister}>
+                <div className="form-group">
+                  <label className="form-label">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    className="form-input"
+                    placeholder="Admin User"
+                    value={registerName}
+                    onChange={(e) => setRegisterName(e.target.value)}
+                  />
+                </div>
 
-              <div className="form-group">
-                <label className="form-label">Email Address</label>
-                <input
-                  type="email"
-                  required
-                  className="form-input"
-                  placeholder="admin@entwoh.com"
-                  value={registerEmail}
-                  onChange={(e) => setRegisterEmail(e.target.value)}
-                />
-              </div>
+                <div className="form-group">
+                  <label className="form-label">Email Address</label>
+                  <input
+                    type="email"
+                    required
+                    className="form-input"
+                    placeholder="admin@entwoh.com"
+                    value={registerEmail}
+                    onChange={(e) => setRegisterEmail(e.target.value)}
+                  />
+                </div>
 
-              <div className="form-group">
-                <label className="form-label">Password</label>
-                <input
-                  type="password"
-                  required
-                  className="form-input"
-                  placeholder="•••••••• (min 6 characters)"
-                  value={registerPassword}
-                  onChange={(e) => setRegisterPassword(e.target.value)}
-                />
-              </div>
+                <div className="form-group">
+                  <label className="form-label">Password</label>
+                  <input
+                    type="password"
+                    required
+                    className="form-input"
+                    placeholder="•••••••• (min 6 characters)"
+                    value={registerPassword}
+                    onChange={(e) => setRegisterPassword(e.target.value)}
+                  />
+                </div>
 
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowRegisterModal(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="btn btn-primary" disabled={actionLoading === 'register'}>
-                  {actionLoading === 'register' ? 'Creating...' : 'Register'}
-                </button>
-              </div>
-            </form>
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowRegisterModal(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary" disabled={actionLoading === 'register'}>
+                    {actionLoading === 'register' ? 'Creating...' : 'Register'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
@@ -1431,15 +1466,58 @@ function App() {
               </button>
               <button
                 className="btn btn-danger"
-                onClick={() => {
+                disabled={actionLoading === 'logout'}
+                onClick={async () => {
+                  await handleLogout();
                   setShowLogoutConfirmModal(false);
-                  handleLogout();
                 }}
                 style={{ flex: 1 }}
               >
-                Logout
+                {actionLoading === 'logout' ? 'Logging out...' : 'Logout'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Global Action Loading Overlay */}
+      {actionLoading && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.4)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1100,
+          animation: 'fadeIn 0.2s ease-out'
+        }}>
+          <div className="card" style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '30px 40px',
+            gap: '16px',
+            textAlign: 'center',
+            maxWidth: '320px',
+            backgroundColor: 'var(--bg-card)',
+            border: '1px solid var(--border-color)',
+            boxShadow: 'var(--shadow-md)',
+            borderRadius: 'var(--radius-md)'
+          }}>
+            <FlickerSpinner size={40} />
+            <span style={{ fontSize: '15px', fontWeight: 500, color: 'var(--text-title)' }}>
+              {actionLoading === 'login' && 'Signing In...'}
+              {actionLoading === 'register' && 'Creating Account...'}
+              {actionLoading === 'logout' && 'Logging Out...'}
+              {actionLoading === 'service-save' && 'Saving Service...'}
+              {actionLoading === 'booking' && 'Booking Appointment...'}
+              {actionLoading.startsWith('status-') && 'Updating Booking Status...'}
+              {actionLoading.startsWith('cancel-') && 'Cancelling Booking...'}
+            </span>
           </div>
         </div>
       )}
