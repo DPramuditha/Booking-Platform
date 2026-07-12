@@ -1005,8 +1005,8 @@ function App() {
                                 <td>
                                   <span className={`badge badge-${booking.status.toLowerCase()}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                                     <span className={`status-dot-wrapper ${booking.status === 'PENDING' ? 'status-dot-warning' :
-                                        booking.status === 'CONFIRMED' ? 'status-dot-info' :
-                                          booking.status === 'CANCELLED' ? 'status-dot-error' : ''
+                                      booking.status === 'CONFIRMED' ? 'status-dot-info' :
+                                        booking.status === 'CANCELLED' ? 'status-dot-error' : ''
                                       }`} style={{ width: '8px', height: '8px' }}>
                                       <span className="status-dot-ping animate-ping" style={{ width: '8px', height: '8px' }}></span>
                                       <span className="status-dot-core" style={{ width: '8px', height: '8px' }}></span>
@@ -1117,7 +1117,7 @@ function App() {
                   type="email"
                   required
                   className="form-input"
-                  placeholder="john@example.com"
+                  placeholder="dimuthu@example.com"
                   value={customerEmail}
                   onChange={(e) => setCustomerEmail(e.target.value)}
                 />
@@ -1358,7 +1358,7 @@ function App() {
                   type="text"
                   required
                   className="form-input"
-                  placeholder="e.g. Hair Styling & Trim"
+                  placeholder="e.g. web development"
                   value={serviceTitle}
                   onChange={(e) => setServiceTitle(e.target.value)}
                 />
