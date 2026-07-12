@@ -40,7 +40,7 @@ export class UsersService {
   async findByEmail(email: string): Promise<User | null> {
     return this.usersRepository.findOne({
       where: { email: email.toLowerCase().trim() },
-      select: ['id', 'email', 'password', 'name', 'refreshToken'], // Explicitly select password for login verification
+      select: ['id', 'email', 'password', 'name', 'role', 'refreshToken'], // Explicitly select password and role for login verification
     });
   }
 

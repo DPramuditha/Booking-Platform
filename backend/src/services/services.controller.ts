@@ -3,6 +3,7 @@ import { ServicesService } from './services.service';
 import { CreateServiceDto } from './dto/create-service.dto';
 import { UpdateServiceDto } from './dto/update-service.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { IsAdminGuard } from '../auth/is-admin.guard';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 
 @ApiTags('Service Management')
@@ -11,7 +12,7 @@ export class ServicesController {
   constructor(private servicesService: ServicesService) {}
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, IsAdminGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new service (Admin only)' })
   @ApiResponse({ status: 201, description: 'Service created successfully' })
@@ -38,7 +39,7 @@ export class ServicesController {
   }
 
   @Put(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, IsAdminGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update an existing service (Admin only)' })
   @ApiResponse({ status: 200, description: 'Service updated successfully' })
@@ -49,7 +50,7 @@ export class ServicesController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, IsAdminGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a service (Admin only)' })
   @ApiResponse({ status: 200, description: 'Service deleted successfully' })

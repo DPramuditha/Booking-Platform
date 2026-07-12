@@ -16,7 +16,7 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto) {
-    return this.usersService.create(registerDto);
+    return this.usersService.create(registerDto as any);
   }
 
   async login(loginDto: LoginDto) {
@@ -38,6 +38,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         name: user.name,
+        role: user.role,
       },
       ...tokens,
     };
@@ -65,7 +66,7 @@ export class AuthService {
   }
 
   private async generateTokens(user: User) {
-    const payload = { sub: user.id, email: user.email };
+    const payload = { sub: user.id, email: user.email, role: user.role };
     
     const accessToken = await this.jwtService.signAsync(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),

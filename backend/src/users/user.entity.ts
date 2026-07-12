@@ -1,5 +1,10 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
+export enum UserRole {
+  ADMIN = 'admin',
+  CUSTOMER = 'customer',
+}
+
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
@@ -13,6 +18,13 @@ export class User {
 
   @Column()
   name!: string;
+
+  @Column({
+    type: 'varchar',
+    length: 20,
+    default: UserRole.CUSTOMER,
+  })
+  role!: UserRole;
 
   @Column({ nullable: true, select: false })
   refreshToken?: string;

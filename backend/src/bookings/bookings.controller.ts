@@ -3,6 +3,7 @@ import { BookingsService } from './bookings.service';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingStatusDto } from './dto/update-booking-status.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { IsAdminGuard } from '../auth/is-admin.guard';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
 import { BookingStatus } from './booking.entity';
 
@@ -21,7 +22,7 @@ export class BookingsController {
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, IsAdminGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get all bookings with pagination, search, and status filters (Admin only)' })
   @ApiQuery({ name: 'page', type: Number, required: false, example: 1 })
@@ -40,7 +41,7 @@ export class BookingsController {
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, IsAdminGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get details of a specific booking (Admin only)' })
   @ApiResponse({ status: 200, description: 'Booking retrieved successfully' })
@@ -51,7 +52,7 @@ export class BookingsController {
   }
 
   @Put(':id/status')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, IsAdminGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a booking status (Admin only)' })
   @ApiResponse({ status: 200, description: 'Booking status updated successfully' })
