@@ -18,7 +18,10 @@ import {
   LayoutGrid,
   CalendarCheck,
   Banknote,
-  Activity
+  Activity,
+  X,
+  LogIn,
+  UserPlus
 } from 'lucide-react';
 import { api, getAuthUser, type Service, type Booking, type User } from './api';
 import FlickerSpinner from './FlickerSpinner';
@@ -90,6 +93,7 @@ function App() {
   // Admin Service Modals
   const [serviceModalMode, setServiceModalMode] = useState<'create' | 'edit' | null>(null);
   const [editingServiceId, setEditingServiceId] = useState<string | null>(null);
+  const [deletingService, setDeletingService] = useState<Service | null>(null);
   const [serviceTitle, setServiceTitle] = useState('');
   const [serviceDescription, setServiceDescription] = useState('');
   const [serviceDuration, setServiceDuration] = useState(30);
@@ -125,7 +129,8 @@ function App() {
       showRegisterModal ||
       showLogoutConfirmModal ||
       serviceModalMode !== null ||
-      selectedService !== null;
+      selectedService !== null ||
+      deletingService !== null;
 
     if (isModalOpen) {
       document.body.style.overflow = 'hidden';
@@ -139,7 +144,7 @@ function App() {
       document.body.style.overflow = '';
       document.body.style.paddingRight = '';
     };
-  }, [showLoginModal, showRegisterModal, showLogoutConfirmModal, serviceModalMode, selectedService]);
+  }, [showLoginModal, showRegisterModal, showLogoutConfirmModal, serviceModalMode, selectedService, deletingService]);
 
   // Watch authentication state changes
   useEffect(() => {
@@ -371,9 +376,8 @@ function App() {
   };
 
   const handleDeleteService = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this service? Bookings attached to this service will prevent deletion.')) return;
     try {
-      setActionLoading(`delete-${id}`);
+      setActionLoading('service-delete');
       await api.services.delete(id);
       showSuccess('Service deleted successfully');
       fetchServices();
@@ -381,6 +385,7 @@ function App() {
       showError(err.message || 'Failed to delete service. Check if active bookings are attached to it.');
     } finally {
       setActionLoading(null);
+      setDeletingService(null);
     }
   };
 
@@ -667,10 +672,12 @@ function App() {
                     Please login or create an account to manage services and review bookings.
                   </p>
                   <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', width: '100%' }}>
-                    <button className="btn btn-primary" onClick={() => setShowLoginModal(true)} style={{ flex: 1, maxWidth: '150px' }}>
+                    <button className="btn btn-primary" onClick={() => setShowLoginModal(true)} style={{ flex: 1, maxWidth: '150px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      <LogIn size={16} />
                       Sign In
                     </button>
-                    <button className="btn btn-secondary" onClick={() => setShowRegisterModal(true)} style={{ flex: 1, maxWidth: '150px' }}>
+                    <button className="btn btn-secondary" onClick={() => setShowRegisterModal(true)} style={{ flex: 1, maxWidth: '150px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      <UserPlus size={16} />
                       Register
                     </button>
                   </div>
@@ -885,9 +892,13 @@ function App() {
                           </button>
                           <button
                             style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: 0 }}
-                            onClick={() => handleDeleteService(service.id)}
+                            onClick={() => setDeletingService(service)}
                           >
-                            <Trash size={16} style={{ color: 'var(--error)' }} />
+                            {/* <Trash size={16} style={{ color: 'var(--error)' }} /> */}
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style={{ width: '16px', height: '16px', color: 'var(--error)' }}>
+                              <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                            </svg>
+
                           </button>
                         </div>
 
@@ -1170,7 +1181,31 @@ function App() {
         <div className="modal-overlay" onClick={() => setShowLoginModal(false)}>
           <div className="modal-content split-modal" onClick={(e) => e.stopPropagation()}>
             <div className="split-modal-image" />
-            <div className="split-modal-form">
+            <div className="split-modal-form" style={{ position: 'relative' }}>
+              <button
+                onClick={() => setShowLoginModal(false)}
+                style={{
+                  position: 'absolute',
+                  top: '16px',
+                  right: '16px',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '50%',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--border-color)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                title="Close"
+              >
+                <X size={20} />
+              </button>
+
               <h2 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '20px' }}>
                 Admin Login
               </h2>
@@ -1204,7 +1239,8 @@ function App() {
                   <button type="button" className="btn btn-secondary" onClick={() => setShowLoginModal(false)}>
                     Cancel
                   </button>
-                  <button type="submit" className="btn btn-primary" disabled={actionLoading === 'login'}>
+                  <button type="submit" className="btn btn-primary" disabled={actionLoading === 'login'} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                    <LogIn size={16} />
                     {actionLoading === 'login' ? 'Signing In...' : 'Log In'}
                   </button>
                 </div>
@@ -1219,7 +1255,31 @@ function App() {
         <div className="modal-overlay" onClick={() => setShowRegisterModal(false)}>
           <div className="modal-content split-modal" onClick={(e) => e.stopPropagation()}>
             <div className="split-modal-image" />
-            <div className="split-modal-form">
+            <div className="split-modal-form" style={{ position: 'relative' }}>
+              <button
+                onClick={() => setShowRegisterModal(false)}
+                style={{
+                  position: 'absolute',
+                  top: '16px',
+                  right: '16px',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '50%',
+                  transition: 'background-color 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--border-color)'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                title="Close"
+              >
+                <X size={20} />
+              </button>
+
               <h2 style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '20px' }}>
                 Create Admin Account
               </h2>
@@ -1265,7 +1325,8 @@ function App() {
                   <button type="button" className="btn btn-secondary" onClick={() => setShowRegisterModal(false)}>
                     Cancel
                   </button>
-                  <button type="submit" className="btn btn-primary" disabled={actionLoading === 'register'}>
+                  <button type="submit" className="btn btn-primary" disabled={actionLoading === 'register'} style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                    <UserPlus size={16} />
                     {actionLoading === 'register' ? 'Creating...' : 'Register'}
                   </button>
                 </div>
@@ -1474,6 +1535,45 @@ function App() {
                 style={{ flex: 1 }}
               >
                 {actionLoading === 'logout' ? 'Logging out...' : 'Logout'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Service Delete Confirmation Modal */}
+      {deletingService && (
+        <div className="modal-overlay" onClick={() => setDeletingService(null)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '450px', textAlign: 'center' }}>
+            <h3 style={{ fontSize: '20px', marginBottom: '12px', color: 'var(--error)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <AlertCircle size={24} style={{ color: 'var(--error)' }} />
+              Confirm Deletion
+            </h3>
+            <p style={{ color: 'var(--text-title)', fontWeight: 600, marginBottom: '8px', fontSize: '15px' }}>
+              Are you sure you want to delete "{deletingService.title}"?
+            </p>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '24px', fontSize: '13px', lineHeight: '1.5' }}>
+              This action cannot be undone. Please note that if there are any bookings attached to this service, the system will prevent deletion.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setDeletingService(null)}
+                style={{ flex: 1 }}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={() => handleDeleteService(deletingService.id)}
+                style={{ flex: 1, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+              >
+                {/* <Trash size={16} />  */}
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style={{ width: '16px', height: '16px', color: 'var(--error)' }}>
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                </svg>
+
+                Delete Service
               </button>
             </div>
           </div>
